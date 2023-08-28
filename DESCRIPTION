@@ -1,6 +1,6 @@
 Package: blobomics
 Title: Blob Detection to Infer Multi-scale Spatial Patterns in Spatial 'omics Datasets
-Version: 0.0.0.9000
+Version: 0.9.0
 Authors@R: c(
             person(given = "Dharmesh D.",
                    family = "Bhuva",
@@ -23,3 +23,6 @@ Imports:
     SummarizedExperiment
 LinkingTo: 
     Rcpp
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
