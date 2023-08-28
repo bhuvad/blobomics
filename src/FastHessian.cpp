@@ -3,6 +3,8 @@
 using namespace Rcpp;
 using namespace std;
 
+// package names: blobomics, blobscopeR
+
 // SolveLinearSystem, DotProduct, findMaximum, interpFeature, and fitQuadrat functions adapted/borrowed from https://github.com/herbertbay/SURF
 
 // Solve the square system of linear equations, Ax=b, where A is given
@@ -384,7 +386,7 @@ bool interpFeature(double *pt, std::array<NumericMatrix, 4> responses, std::arra
   return true;
 }
 
-DataFrame findMaximum(std::array<NumericMatrix, 4> responses, std::array<int, 4> scales, LogicalMatrix bounds, const double threshold)
+void findMaximum(vector<list<double>> &df, std::array<NumericMatrix, 4> responses, std::array<int, 4> scales, LogicalMatrix bounds, const double threshold)
 {
   const int nrow = responses[0].nrow(), ncol = responses[0].ncol();
   double best;
@@ -392,7 +394,6 @@ DataFrame findMaximum(std::array<NumericMatrix, 4> responses, std::array<int, 4>
   int r, c, s, ss;
   int dr, dc, ds;
   int cas;
-  NumericVector vx, vy, vs, vr;
 
   // find maxima
   for (int k = 1; k < 3; k += 2)
@@ -545,18 +546,14 @@ DataFrame findMaximum(std::array<NumericMatrix, 4> responses, std::array<int, 4>
         pt[3] = responses[s](c, r);
         if (interpFeature(pt, responses, scales, bounds, threshold, 5))
         {
-          // if (true) {
-          vs.push_back(pt[0] / 3.0 * (scales[3] - scales[0]));
-          vx.push_back(pt[1]);
-          vy.push_back(pt[2]);
-          vr.push_back(pt[3]);
+          df[0].push_back(pt[0] / 3.0 * (scales[3] - scales[0]));
+          df[1].push_back(pt[1]);
+          df[2].push_back(pt[2]);
+          df[3].push_back(pt[3]);
         }
       }
     }
   }
-
-  DataFrame df = DataFrame::create(_["x"] = vx, _["y"] = vy, _["s"] = vs, _["r"] = vr);
-  return df;
 }
 
 IntegerVector getAllScales(int octaves)
@@ -577,8 +574,8 @@ IntegerVector getAllScales(int octaves)
 // [[Rcpp::export]]
 DataFrame fastHessian(NumericMatrix emat, NumericVector maskvec, IntegerVector x, IntegerVector y, int octaves, int threshold)
 {
-  DataFrame res, df;
-  NumericVector vx, vy, vs, vg, vr, dfx, dfy, dfs, dfr;
+  DataFrame res;
+  vector<list<double>> df(4);
   int xmx = max(x), ymx = max(y);
   NumericMatrix iim;
   IntegerMatrix imask;
@@ -631,25 +628,12 @@ DataFrame fastHessian(NumericMatrix emat, NumericVector maskvec, IntegerVector x
       sc[1] = sc[3];
       sc[2] = scales[2 * o + 2];
       sc[3] = scales[2 * o + 3];
-      df = findMaximum(responses, sc, bounds, threshold);
-
-      // append results
-      dfx = df[0];
-      dfy = df[1];
-      dfs = df[2];
-      dfr = df[3];
-      for (int i = 0; i < df.nrow(); i++)
-      {
-        vx.push_back(dfx[i]);
-        vy.push_back(dfy[i]);
-        vs.push_back(dfs[i]);
-        vr.push_back(dfr[i]);
-        vg.push_back(g);
-      }
+      findMaximum(df, responses, sc, bounds, threshold);
     }
   }
 
-  res = DataFrame::create(_["x"] = vx, _["y"] = vy, _["scale"] = vs, _["response"] = vr, _["gene"] = vg);
+  res = wrap(df);
+  res.attr("names") = CharacterVector::create("scale", "x", "y", "response");
   return res;
 }
 
