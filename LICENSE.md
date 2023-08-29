@@ -552,7 +552,7 @@ to the start of each source file to most effectively state the exclusion of warr
 and each file should have at least the “copyright” line and a pointer to
 where the full notice is found.
 
-    blobomics - blob detection to infer multi-scale spatial patterns in spatial
+    spaceblobs - blob detection to infer multi-scale spatial patterns in spatial
     'omics datasets. Copyright (C) 2023 Dharmesh D Bhuva
 
     This program is free software: you can redistribute it and/or modify

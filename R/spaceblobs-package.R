@@ -1,5 +1,5 @@
 ## usethis namespace: start
 #' @importFrom Rcpp sourceCpp
-#' @useDynLib blobomics, .registration = TRUE
+#' @useDynLib spaceblobs, .registration = TRUE
 ## usethis namespace: end
 NULL
