@@ -2,6 +2,8 @@
 // Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 #include <Rcpp.h>
+#include <string>
+#include <set>
 
 using namespace Rcpp;
 
@@ -12,10 +14,9 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 
 // fastHessian
 DataFrame fastHessian(NumericMatrix emat, NumericVector maskvec, IntegerVector x, IntegerVector y, int octaves, int threshold);
-RcppExport SEXP _blobomics_fastHessian(SEXP ematSEXP, SEXP maskvecSEXP, SEXP xSEXP, SEXP ySEXP, SEXP octavesSEXP, SEXP thresholdSEXP) {
+static SEXP _blobomics_fastHessian_try(SEXP ematSEXP, SEXP maskvecSEXP, SEXP xSEXP, SEXP ySEXP, SEXP octavesSEXP, SEXP thresholdSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type emat(ematSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type maskvec(maskvecSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type x(xSEXP);
@@ -24,26 +25,92 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type threshold(thresholdSEXP);
     rcpp_result_gen = Rcpp::wrap(fastHessian(emat, maskvec, x, y, octaves, threshold));
     return rcpp_result_gen;
-END_RCPP
+END_RCPP_RETURN_ERROR
+}
+RcppExport SEXP _blobomics_fastHessian(SEXP ematSEXP, SEXP maskvecSEXP, SEXP xSEXP, SEXP ySEXP, SEXP octavesSEXP, SEXP thresholdSEXP) {
+    SEXP rcpp_result_gen;
+    {
+        Rcpp::RNGScope rcpp_rngScope_gen;
+        rcpp_result_gen = PROTECT(_blobomics_fastHessian_try(ematSEXP, maskvecSEXP, xSEXP, ySEXP, octavesSEXP, thresholdSEXP));
+    }
+    Rboolean rcpp_isInterrupt_gen = Rf_inherits(rcpp_result_gen, "interrupted-error");
+    if (rcpp_isInterrupt_gen) {
+        UNPROTECT(1);
+        Rf_onintr();
+    }
+    bool rcpp_isLongjump_gen = Rcpp::internal::isLongjumpSentinel(rcpp_result_gen);
+    if (rcpp_isLongjump_gen) {
+        Rcpp::internal::resumeJump(rcpp_result_gen);
+    }
+    Rboolean rcpp_isError_gen = Rf_inherits(rcpp_result_gen, "try-error");
+    if (rcpp_isError_gen) {
+        SEXP rcpp_msgSEXP_gen = Rf_asChar(rcpp_result_gen);
+        UNPROTECT(1);
+        Rf_error(CHAR(rcpp_msgSEXP_gen));
+    }
+    UNPROTECT(1);
+    return rcpp_result_gen;
 }
 // smoothScales
 NumericMatrix smoothScales(DataFrame features, NumericVector maskvec, IntegerVector x, IntegerVector y);
-RcppExport SEXP _blobomics_smoothScales(SEXP featuresSEXP, SEXP maskvecSEXP, SEXP xSEXP, SEXP ySEXP) {
+static SEXP _blobomics_smoothScales_try(SEXP featuresSEXP, SEXP maskvecSEXP, SEXP xSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< DataFrame >::type features(featuresSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type maskvec(maskvecSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type x(xSEXP);
     Rcpp::traits::input_parameter< IntegerVector >::type y(ySEXP);
     rcpp_result_gen = Rcpp::wrap(smoothScales(features, maskvec, x, y));
     return rcpp_result_gen;
-END_RCPP
+END_RCPP_RETURN_ERROR
+}
+RcppExport SEXP _blobomics_smoothScales(SEXP featuresSEXP, SEXP maskvecSEXP, SEXP xSEXP, SEXP ySEXP) {
+    SEXP rcpp_result_gen;
+    {
+        Rcpp::RNGScope rcpp_rngScope_gen;
+        rcpp_result_gen = PROTECT(_blobomics_smoothScales_try(featuresSEXP, maskvecSEXP, xSEXP, ySEXP));
+    }
+    Rboolean rcpp_isInterrupt_gen = Rf_inherits(rcpp_result_gen, "interrupted-error");
+    if (rcpp_isInterrupt_gen) {
+        UNPROTECT(1);
+        Rf_onintr();
+    }
+    bool rcpp_isLongjump_gen = Rcpp::internal::isLongjumpSentinel(rcpp_result_gen);
+    if (rcpp_isLongjump_gen) {
+        Rcpp::internal::resumeJump(rcpp_result_gen);
+    }
+    Rboolean rcpp_isError_gen = Rf_inherits(rcpp_result_gen, "try-error");
+    if (rcpp_isError_gen) {
+        SEXP rcpp_msgSEXP_gen = Rf_asChar(rcpp_result_gen);
+        UNPROTECT(1);
+        Rf_error(CHAR(rcpp_msgSEXP_gen));
+    }
+    UNPROTECT(1);
+    return rcpp_result_gen;
+}
+
+// validate (ensure exported C++ functions exist before calling them)
+static int _blobomics_RcppExport_validate(const char* sig) { 
+    static std::set<std::string> signatures;
+    if (signatures.empty()) {
+        signatures.insert("DataFrame(*fastHessian)(NumericMatrix,NumericVector,IntegerVector,IntegerVector,int,int)");
+        signatures.insert("NumericMatrix(*smoothScales)(DataFrame,NumericVector,IntegerVector,IntegerVector)");
+    }
+    return signatures.find(sig) != signatures.end();
+}
+
+// registerCCallable (register entry points for exported C++ functions)
+RcppExport SEXP _blobomics_RcppExport_registerCCallable() { 
+    R_RegisterCCallable("blobomics", "_blobomics_fastHessian", (DL_FUNC)_blobomics_fastHessian_try);
+    R_RegisterCCallable("blobomics", "_blobomics_smoothScales", (DL_FUNC)_blobomics_smoothScales_try);
+    R_RegisterCCallable("blobomics", "_blobomics_RcppExport_validate", (DL_FUNC)_blobomics_RcppExport_validate);
+    return R_NilValue;
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_blobomics_fastHessian", (DL_FUNC) &_blobomics_fastHessian, 6},
     {"_blobomics_smoothScales", (DL_FUNC) &_blobomics_smoothScales, 4},
+    {"_blobomics_RcppExport_registerCCallable", (DL_FUNC) &_blobomics_RcppExport_registerCCallable, 0},
     {NULL, NULL, 0}
 };
 
