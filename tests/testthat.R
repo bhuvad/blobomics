@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(blobomics)
+library(spaceblobs)
 
-test_check("blobomics")
+test_check("spaceblobs")
