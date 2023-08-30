@@ -78,7 +78,7 @@ detectIP_intl <- function(spe, assay = "counts", mask = NULL, features, thresh, 
     # convert assay id to assay name
     assay = SummarizedExperiment::assayNames(spe)[assay]
   }
-  ipassay = paste(ipassay, assay, collapse = "_")
+  ipassay = paste(ipassay, assay, sep = "_")
 
   # check mask
   if (is.null(mask)) {
@@ -241,18 +241,19 @@ detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, t
       stop("BumpyMatrix is not in the correct format (should be the output of 'detectInterestPoints()'")
     }
 
-    if (sum(sum(ip[,, "response"] > thresh)) == 0) {
+    keep = ip[, , "response"] > thresh
+    if (sum(sum(keep)) == 0) {
       # if no interest points found
       sc = rep_len(NA_real_, sum(is_samp))
     } else {
       # filter and compute average scale per location
-      sc = colSums(sum(ip[, , "scale"][ip[,, "response"] > thresh]))
-      sc = sc / colSums(as.matrix(lengths(ip)))
+      sc = colSums(sum(ip[, , "scale"][keep]))
+      sc = sc / colSums(as.matrix(lengths(ip[, , "scale"][keep])))
       sc = sc / 2
       if (smooth) {
         # diffuse scales and return
         df = data.frame("x" = coords[, 1], "y" = coords[, 2], "scale" = sc)
-        df = df[!is.nan(df$scale), ]
+        df = df[!is.nan(sc), ]
         sc = .Call(`_spaceblobs_smoothScales`, df, mask, coords[, 1], coords[, 2])
         sc = sc[coords]
       } else {
