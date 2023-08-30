@@ -385,7 +385,7 @@ bool interpFeature(double *pt, std::array<NumericMatrix, 4> responses, std::arra
   return true;
 }
 
-void findMaximum(vector<list<double>> &df, int g, std::array<NumericMatrix, 4> responses, std::array<int, 4> scales, LogicalMatrix bounds, const double threshold)
+void findMaximum(vector<list<double>> &df, int g, int o, std::array<NumericMatrix, 4> responses, std::array<int, 4> scales, LogicalMatrix bounds, const double threshold)
 {
   const int nrow = responses[0].nrow(), ncol = responses[0].ncol();
   double best;
@@ -550,6 +550,7 @@ void findMaximum(vector<list<double>> &df, int g, std::array<NumericMatrix, 4> r
           df[2].push_back(pt[2]);
           df[3].push_back(pt[3]);
           df[4].push_back(g);
+          df[5].push_back(o);
         }
       }
     }
@@ -575,7 +576,7 @@ IntegerVector getAllScales(int octaves)
 DataFrame fastHessian(NumericMatrix emat, NumericVector maskvec, IntegerVector x, IntegerVector y, int octaves, int threshold)
 {
   DataFrame res;
-  vector<list<double>> df(5);
+  vector<list<double>> df(6);
   int xmx = max(x), ymx = max(y);
   NumericMatrix iim;
   IntegerMatrix imask;
@@ -628,12 +629,12 @@ DataFrame fastHessian(NumericMatrix emat, NumericVector maskvec, IntegerVector x
       sc[1] = sc[3];
       sc[2] = scales[2 * o + 2];
       sc[3] = scales[2 * o + 3];
-      findMaximum(df, g + 1, responses, sc, bounds, threshold);
+      findMaximum(df, g + 1, o + 1, responses, sc, bounds, threshold);
     }
   }
 
   res = wrap(df);
-  res.attr("names") = CharacterVector::create("scale", "x", "y", "response", "gene");
+  res.attr("names") = CharacterVector::create("scale", "x", "y", "response", "gene", "octave");
   return res;
 }
 
