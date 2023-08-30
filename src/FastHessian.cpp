@@ -117,7 +117,7 @@ IntegerMatrix iimage(IntegerMatrix im)
   return im;
 }
 
-IntegerVector getBoxSizes(int w)
+IntegerVector getBoxSizesFH(int w)
 {
   IntegerVector sizes(5);
   // compute boxes (uses integer division)
@@ -131,10 +131,10 @@ IntegerVector getBoxSizes(int w)
   return sizes;
 }
 
-IntegerVector getOvlap(int w)
+IntegerVector getOvlapFH(int w)
 {
   IntegerVector ovlap(3);
-  IntegerVector sizes = getBoxSizes(w);
+  IntegerVector sizes = getBoxSizesFH(w);
 
   ovlap(0) = (sizes(2) * 2 + 1) * w / 3; // minus x, y filters
   ovlap(1) = ovlap(0) * 2;               // plus x, y filters
@@ -170,7 +170,7 @@ LogicalMatrix getNMSBounds(IntegerMatrix imask)
   return out;
 }
 
-std::array<NumericMatrix, 6> maskWeights(IntegerMatrix imask, LogicalMatrix mask, IntegerVector sizes, IntegerVector ovlap)
+std::array<NumericMatrix, 6> maskWeightsFH(IntegerMatrix imask, LogicalMatrix mask, IntegerVector sizes, IntegerVector ovlap)
 {
   IntegerVector bx(16), by(16);
   const int nrow = imask.nrow(), ncol = imask.ncol();
@@ -228,11 +228,11 @@ std::array<NumericMatrix, 6> maskWeights(IntegerMatrix imask, LogicalMatrix mask
       // count
       cxyn = getSum(imask, bx[8], by[8], bx[9], by[9]);
       cxyn += getSum(imask, bx[10], by[10], bx[11], by[11]);
-      if (cyyn == 0)
+      if (cxyn == 0)
         continue;
       cxyp = getSum(imask, bx[12], by[12], bx[13], by[13]);
       cxyp += getSum(imask, bx[14], by[14], bx[15], by[15]);
-      if (cyyp == 0)
+      if (cxyp == 0)
         continue;
 
       // store
@@ -599,9 +599,9 @@ DataFrame fastHessian(NumericMatrix emat, NumericVector maskvec, IntegerVector x
   for (int k = 0; k < scales.size(); k++)
   {
     // prepare scales
-    boxSizes[k] = getBoxSizes(scales[k]);
-    ov = getOvlap(scales[k]);
-    maskwts[k] = maskWeights(imask, mask, boxSizes[k], ov);
+    boxSizes[k] = getBoxSizesFH(scales[k]);
+    ov = getOvlapFH(scales[k]);
+    maskwts[k] = maskWeightsFH(imask, mask, boxSizes[k], ov);
   }
 
   for (int g = 0; g < emat.ncol(); g++)
@@ -682,4 +682,42 @@ NumericMatrix smoothScales(DataFrame features, NumericVector maskvec, IntegerVec
   }
 
   return scale;
+}
+
+NumericMatrix getResponse(NumericVector evec, NumericVector maskvec, IntegerVector x, IntegerVector y, int scale)
+{
+  DataFrame res;
+  int xmx = max(x), ymx = max(y);
+  NumericMatrix iim, response;
+  IntegerMatrix imask;
+  LogicalMatrix mask, bounds;
+  IntegerVector ov;
+  std::array<NumericMatrix, 6> maskwts;
+  IntegerVector boxSizes;
+
+  // precompute mask and its weights
+  imask = (IntegerMatrix)image(maskvec, x, y, xmx, ymx);
+  mask = (LogicalMatrix)clone(imask);
+  imask = iimage(imask);
+  bounds = getNMSBounds(imask); // NMS boundaries
+
+  // prepare scales and weights
+  boxSizes = getBoxSizesFH(scale);
+  ov = getOvlapFH(scale);
+  maskwts = maskWeightsFH(imask, mask, boxSizes, ov);
+
+  // create integral image
+  iim = iimage(image(evec, x, y, xmx, ymx));
+
+  // compute responses
+  response = getHessian(iim, mask, boxSizes, maskwts);
+  return response;
+}
+
+List getMaskWeights(IntegerMatrix imask, LogicalMatrix mask, IntegerVector sizes, IntegerVector ovlap)
+{
+  std::array<NumericMatrix, 6> msk = maskWeightsFH(imask, mask, sizes, ovlap);
+
+  List L = {msk[0], msk[1], msk[2], msk[3], msk[4], msk[5]};
+  return L;
 }
