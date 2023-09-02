@@ -64,6 +64,7 @@ getOctaves <- function(spe) {
 detectIP_intl <- function(spe, assay = "counts", mask = NULL, features, thresh, ipassay = "ipoints", octaves = getOctaves(spe)) {
   # checks
   stopifnot(length(unique(spe$sample_id)) == 1)
+  stopifnot(octaves < getOctaves(spe) + 1)
 
   # check coordinates
   coords = SpatialExperiment::spatialCoords(spe)
@@ -92,6 +93,7 @@ detectIP_intl <- function(spe, assay = "counts", mask = NULL, features, thresh, 
   # get interest points
   emat = t(as.matrix(SummarizedExperiment::assay(spe[features, ], assay)))
   df = .Call(`_spaceblobs_fastHessian`, emat, mask, coords[, 1], coords[, 2], octaves, thresh)
+  df = df[df$x <=xmx & df$y <= ymx, ]
 
   # resolve row indices
   irow = df$gene
@@ -133,7 +135,7 @@ detectIP_intl <- function(spe, assay = "counts", mask = NULL, features, thresh, 
 #' # ADD_EXAMPLES_HERE
 #' 
 #' @export 
-detectInterestPoints <- function(spe, assay = assayNames(spe)[1], masks = NULL, features = TRUE, thresh = 0, ipassay = "ipoints", octaves = NULL, BPPARAM = bpparam()) {
+detectInterestPoints <- function(spe, assay = assayNames(spe)[1], masks = NULL, features = TRUE, thresh = 0, ipassay = "ipoints", octaves = NULL, BPPARAM = BiocParallel::bpparam()) {
   stopifnot(is(spe, "SpatialExperiment"))
   stopifnot(ncol(SpatialExperiment::spatialCoords(spe)) == 2)
   stopifnot(thresh >= 0)
@@ -185,7 +187,7 @@ detectInterestPoints <- function(spe, assay = assayNames(spe)[1], masks = NULL, 
 #' # ADD_EXAMPLES_HERE
 #' 
 #' @export
-detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, thresh = 0, BPPARAM = bpparam()) {
+detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, thresh = 0, BPPARAM = BiocParallel::bpparam()) {
   stopifnot(is(spe, "SpatialExperiment"))
   stopifnot(ncol(SpatialExperiment::spatialCoords(spe)) == 2)
   stopifnot(thresh >= 0)
