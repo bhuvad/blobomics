@@ -543,7 +543,7 @@ void findMaximum(vector<list<double>> &df, int g, int o, std::array<NumericMatri
         pt[1] = c;
         pt[2] = r;
         pt[3] = responses[s](c, r);
-        if (interpFeature(pt, responses, scales, bounds, threshold, 5))
+        if (interpFeature(pt, responses, scales, bounds, threshold, 5) & s > 0)
         {
           df[0].push_back(pt[0] / 3.0 * (scales[3] - scales[0]));
           df[1].push_back(pt[1]);
