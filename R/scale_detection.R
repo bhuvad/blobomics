@@ -15,6 +15,8 @@ checkMask <- function(mask, spe, plot = FALSE) {
   if (any(!as.vector(mask) %in% 0:1)) {
     stop("'mask' should be a binary matrix")
   }
+
+  return(mask)
 }
 
 checkFeatures <- function(spe, features) {
@@ -85,9 +87,9 @@ detectIP_intl <- function(spe, assay = "counts", mask = NULL, features, thresh, 
   if (is.null(mask)) {
     mask = rep_len(1, nrow(coords))
   } else {
-    checkMask(mask, spe, plot = FALSE)
+    mask = checkMask(mask, spe, plot = FALSE)
     # transpose
-    mask = mask[coords[, 2], coords[, 1]]
+    mask = mask[coords[, 2:1]]
   }
 
   # get interest points
@@ -156,7 +158,7 @@ detectInterestPoints <- function(spe, assay = assayNames(spe)[1], masks = NULL, 
   if (!is.null(masks)) {
     stopifnot(is.list(masks))
     stopifnot(length(masks) == length(all_samples))
-    stopifnot(names(masks) %in% all_samples)
+    stopifnot(all(all_samples %in% names(masks)))
   } else {
     masks = rep(list(NULL), length(all_samples))
     names(masks) = all_samples
@@ -199,7 +201,7 @@ detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, t
   # convert assay id to name
   if (is.numeric(ipassay)) {
     # convert assay id to assay name
-    assay = SummarizedExperiment::assayNames(spe)[ipassay]
+    ipassay = SummarizedExperiment::assayNames(spe)[ipassay]
   } else {
     assay_names = SummarizedExperiment::assayNames(spe)
     if (!ipassay %in% assay_names) {
@@ -217,11 +219,9 @@ detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, t
   if (!is.null(masks)) {
     stopifnot(is.list(masks))
     stopifnot(length(masks) == length(all_samples))
-    stopifnot(names(masks) %in% all_samples)
+    stopifnot(all(all_samples %in% names(masks)))
   } else {
-    masks = lapply(all_samples, \(sample_id) {
-      rep_len(1, sum(spe$sample_id == sample_id))
-    })
+    masks = rep(list(NULL), length(all_samples))
     names(masks) = all_samples
   }
 
@@ -237,6 +237,15 @@ detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, t
     # extract required data
     coords = SpatialExperiment::spatialCoords(x)
     ip = SummarizedExperiment::assay(x, ipassay)
+    
+    # check mask
+    if (is.null(mask)) {
+      mask = rep_len(1, nrow(coords))
+    } else {
+      mask = checkMask(mask, x, plot = FALSE)
+      # transpose
+      mask = mask[coords[, 2:1]]
+    }
 
     # check df
     if (!all(expected_cols %in% colnames(ip[1, 1][[1]]))) {
@@ -262,6 +271,7 @@ detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, t
         sc[is.nan(sc)] = 3 / 2
       }
     }
+    sc[mask == 0] = NA_real_
 
     names(sc) = colnames(x)
     return(sc)
