@@ -316,8 +316,8 @@ double fitQuadrat(double *offset, std::array<NumericMatrix, 4> responses, std::a
 
   // gradients
   offset[0] = g[0] = (responses[k + 1](x, y) - responses[k - 1](x, y)) / 2.0;
-  offset[1] = g[1] = (responses[k](x + 1, y) - responses[k](x + 1, y)) / 2.0;
-  offset[2] = g[2] = (responses[k](x, y + 1) - responses[k](x, y + 1)) / 2.0;
+  offset[1] = g[1] = (responses[k](x + 1, y) - responses[k](x - 1, y)) / 2.0;
+  offset[2] = g[2] = (responses[k](x, y + 1) - responses[k](x, y - 1)) / 2.0;
 
   // Hessian
   H[0][0] = (responses[k + 1](x, y) - 2.0 * responses[k](x, y) + responses[k - 1](x, y));
@@ -543,7 +543,7 @@ void findMaximum(vector<list<double>> &df, int g, int o, std::array<NumericMatri
         pt[1] = c;
         pt[2] = r;
         pt[3] = responses[s](c, r);
-        if (interpFeature(pt, responses, scales, bounds, threshold, 5) & s > 0)
+        if (interpFeature(pt, responses, scales, bounds, threshold, 5) && s > 0)
         {
           df[0].push_back(pt[0] / 3.0 * (scales[3] - scales[0]));
           df[1].push_back(pt[1]);
@@ -661,10 +661,13 @@ NumericMatrix smoothScales(DataFrame features, NumericVector maskvec, IntegerVec
       for (int y = max((int)(cy - cs), 0); y <= min((int)(cy + cs), ymx - 1); y++)
       {
         // distance from edge of circle
-        cinvdist = (cs - sqrt(pow(x - cx, 2.0) + pow(y - cy, 2.0))) / cs;
+        // cinvdist = (cs - sqrt(pow(x - cx, 2.0) + pow(y - cy, 2.0)));
+
+        // Gaussian weights
+        cinvdist = exp((-pow(x - cx, 2.0) - pow(y - cy, 2.0)) / (2.0 * cs * cs)) * cs;
         if (mask(x + 1, y + 1) && cinvdist > 0)
         {
-          scale(x, y) += pow(cinvdist, 1.0) * cs;
+          scale(x, y) += cinvdist;
           count(x, y) += 1;
         }
       }
