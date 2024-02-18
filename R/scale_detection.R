@@ -63,7 +63,7 @@ getOctaves <- function(spe) {
   return(o - 1)
 }
 
-detectIP_intl <- function(spe, assay = "counts", mask = NULL, features, thresh, ipassay = "ipoints", octaves = getOctaves(spe)) {
+detectIP_intl <- function(spe, assay.type = "counts", mask = NULL, features, thresh, ipassay = "ipoints", octaves = getOctaves(spe)) {
   # checks
   stopifnot(length(unique(spe$sample_id)) == 1)
   stopifnot(octaves < getOctaves(spe) + 1)
@@ -77,11 +77,11 @@ detectIP_intl <- function(spe, assay = "counts", mask = NULL, features, thresh, 
   }
 
   # convert assay id to name
-  if (is.numeric(assay)) {
+  if (is.numeric(assay.type)) {
     # convert assay id to assay name
-    assay = SummarizedExperiment::assayNames(spe)[assay]
+    assay.type = SummarizedExperiment::assayNames(spe)[assay.type]
   }
-  ipassay = paste(ipassay, assay, sep = "_")
+  ipassay = paste(ipassay, assay.type, sep = "_")
 
   # check mask
   if (is.null(mask)) {
@@ -93,7 +93,7 @@ detectIP_intl <- function(spe, assay = "counts", mask = NULL, features, thresh, 
   }
 
   # get interest points
-  emat = t(as.matrix(SummarizedExperiment::assay(spe[features, ], assay)))
+  emat = t(as.matrix(SummarizedExperiment::assay(spe[features, ], assay.type)))
   df = .Call(`_spaceblobs_fastHessian`, emat, mask, coords[, 1], coords[, 2], octaves, thresh)
   df = df[df$x <=xmx & df$y <= ymx, ]
 
@@ -123,7 +123,7 @@ detectIP_intl <- function(spe, assay = "counts", mask = NULL, features, thresh, 
 #' Treating spatial omics datasets as multi-channel images, this function builds a Gaussian scale-space pyramid and uses it to infer the scale of each gene at each locus. It then identifies local maxima. Local maxima above a threshold are points of interest that can be used to estimate local scales using the [detectScale()] function. The function uses a fast approximation adapted from the SURF (speeded-up robust features) method.
 #'
 #' @param spe a SpatialExperiment object, containing gene/protein or any such omic measurement. NOTE that spatial coordinates need to be integers. This can be achieved by binning data into coarser bins. Binning will speed up computation without significantly affecting interest point detection and is therefore advised.
-#' @param assay a character or numeric, specifying the assay to use (default is the first assay).
+#' @param assay.type a character or numeric, specifying the assay to use (default is the first assay).
 #' @param masks a named list of binary or logical matrices, that specifies the mask to use for each sample. The defauls (NULL) is to use mask out areas without any expression measurement. Otherwise, the list must be named using the unique [sample_id]'s and should cover all loci (i.e., nrow should be equal to the maximum y coordinate and ncol should equal the maximum x coordinate).
 #' @param features a character or logical vector, specifying the features to be used. If character, these should be rownames of the SpatialExperiment object or the name of a column in colData(spe) containing logical values.
 #' @param thresh a numeric, indicating the response cutoff for each interest point.
@@ -171,7 +171,7 @@ detectInterestPoints <- function(spe, assay = assayNames(spe)[1], masks = NULL, 
     if (is.null(octaves))
       octaves = getOctaves(x)
   
-    detectIP_intl(x, assay, mask, features, thresh, ipassay, octaves)
+    detectIP_intl(x, assay.type, mask, features, thresh, ipassay, octaves)
   }, spe, masks, BPPARAM = BPPARAM, SIMPLIFY = FALSE) |>
     do.call(what = SummarizedExperiment::cbind)
   
