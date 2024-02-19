@@ -6,11 +6,12 @@
 \usage{
 detectScale(
   spe,
-  ipassay = "ipoints",
+  ipassay,
   masks = NULL,
   smooth = TRUE,
   thresh = 0,
-  BPPARAM = bpparam()
+  BPPARAM = BiocParallel::bpparam(),
+  slot.type = c("auto", "assay", "dimred")
 )
 }
 \arguments{
@@ -23,6 +24,8 @@ detectScale(
 \item{thresh}{a numeric, indicating the response cutoff for each interest point.}
 
 \item{BPPARAM}{an optional \link{BiocParallelParam} instance determining the parallel back-end to be used during evaluation.}
+
+\item{slot.type}{a character, specifying where interest points are saved. If expression data from an assay was used, this will be "assay", and if a reduced dimension was used, this will be "dimred". Leaving it at "auto" (the default) will enable a search across both and locate the assay. If assays with the name 'ipassay' exist in both 'assay' and 'dimred', users must specify as "auto" will throw an error.}
 }
 \value{
 a numeric vector containing the estimated scales.

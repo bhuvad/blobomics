@@ -20,27 +20,48 @@ checkMask <- function(mask, spe, plot = FALSE) {
 }
 
 checkFeatures <- function(spe, features) {
+  if (!is.logical(features) & !is.character(features)) {
+    stop("'features' should be logical or character")
+  }
+
   if (is.character(features)) {
     # feature is a column name
     if (length(features) == 1) {
-      cdata = SummarizedExperiment::colData(spe)
-      if (!features %in% colnames(cdata)) {
-        stop("'features' not found in colData(spe)")
+      rdata = SummarizedExperiment::rowData(spe)
+      if (!features %in% colnames(rdata)) {
+        stop(sprintf("'%s' column not found in rowData(spe)", features))
       } else {
-        features = cdata[, features]
+        features = rdata[, features]
       }
     } else {
       # feature contains rownames
       features = rownames(spe) %in% features
     }
-  } else if (is.logical(features)) {
+  }
+  
+  if (is.logical(features)) {
     if (!length(features) %in% c(1, nrow(spe))) {
       stop("'features' should have the same length as nrow(spe)")
     }
-  } else {
-    stop("'features' should be logical or character")
   }
+
   return(features)
+}
+
+checkExprMeasurements <- function(ename, ename_list, param_name) {
+  if (is.numeric(ename)) {
+    if (ename > length(ename_list)) {
+      stop(sprintf("index for '%s' is out of bounds", param_name))
+    }
+    ename = ename_list[ename]
+  } else if (is.character(ename)) {
+    if (!ename %in% ename_list) {
+      stop(sprintf("please select a valid object for '%s'", param_name))
+    }
+  } else {
+    stop(sprintf("invalid type for '%s'", param_name))
+  }
+  return(ename)
 }
 
 getMaxOctaveScales <- function(octave = 1) {
@@ -63,25 +84,18 @@ getOctaves <- function(spe) {
   return(o - 1)
 }
 
-detectIP_intl <- function(spe, assay.type = "counts", mask = NULL, features, thresh, ipassay = "ipoints", octaves = getOctaves(spe)) {
+detectIP_intl <- function(spe, assay.type = "counts", mask = NULL, features, thresh, ipassay = "ipoints", octaves = getOctaves(spe), use.dimred = NULL) {
   # checks
   stopifnot(length(unique(spe$sample_id)) == 1)
-  stopifnot(octaves < getOctaves(spe) + 1)
+  stopifnot(octaves <= getOctaves(spe))
 
   # check coordinates
   coords = SpatialExperiment::spatialCoords(spe)
   xmx = max(coords[, 1])
   ymx = max(coords[, 2])
   if (any(coords - apply(coords, 2, as.integer) > 0)) {
-    stop("'spatialCoords' need to be integers for this function")
+    stop("'spatialCoords' need to be integers representing pixel coordinates")
   }
-
-  # convert assay id to name
-  if (is.numeric(assay.type)) {
-    # convert assay id to assay name
-    assay.type = SummarizedExperiment::assayNames(spe)[assay.type]
-  }
-  ipassay = paste(ipassay, assay.type, sep = "_")
 
   # check mask
   if (is.null(mask)) {
@@ -92,8 +106,26 @@ detectIP_intl <- function(spe, assay.type = "counts", mask = NULL, features, thr
     mask = mask[coords[, 2:1]]
   }
 
+  # extract measurements
+  if (is.null(use.dimred)) {
+    # measurements - assay
+    emat = t(as.matrix(SummarizedExperiment::assay(spe, assay.type)[features, ]))
+    # output name
+    ipassay = paste(ipassay, assay.type, sep = "_")
+    if (ipassay %in% SummarizedExperiment::assayNames(spe)) {
+      stop("please provide a unique name for 'ipassay'")
+    }
+  } else {
+    # measurements - dimred
+    emat = as.matrix(SingleCellExperiment::reducedDim(spe, use.dimred)[, features])
+    # output name
+    ipassay = paste(ipassay, use.dimred, sep = "_")
+    if (ipassay %in% SingleCellExperiment::reducedDimNames(spe)) {
+      stop("please provide a unique name for 'ipassay'")
+    }
+  }
+  
   # get interest points
-  emat = t(as.matrix(SummarizedExperiment::assay(spe[features, ], assay.type)))
   df = .Call(`_spaceblobs_fastHessian`, emat, mask, coords[, 1], coords[, 2], octaves, thresh)
   df = df[df$x <=xmx & df$y <= ymx, ]
 
@@ -111,9 +143,14 @@ detectIP_intl <- function(spe, assay.type = "counts", mask = NULL, features, thr
 
   # convert to BumpyDataFrameMatrix and add assay
   mat = BumpyMatrix::splitAsBumpyMatrix(df, row = irow, column = icol, sparse = TRUE)
-  rownames(mat) = rownames(spe)
   colnames(mat) = colnames(spe)
-  SummarizedExperiment::assay(spe, ipassay) = mat
+  if (is.null(use.dimred)) {
+    rownames(mat) = rownames(spe)
+    SummarizedExperiment::assay(spe, ipassay) = mat
+  } else {
+    rownames(mat) = colnames(SingleCellExperiment::reducedDim(spe, use.dimred))
+    SingleCellExperiment::reducedDim(spe, ipassay) = t(mat)
+  }
 
   return(spe)
 }
@@ -130,27 +167,21 @@ detectIP_intl <- function(spe, assay.type = "counts", mask = NULL, features, thr
 #' @param ipassay a character, specifying the prefix of the assay where detected interest points are stored.
 #' @param octaves a numeric, stating the maximum number of octaves that should be computed (default NULL, max octave is automatically computed for each sample).
 #' @param BPPARAM an optional [BiocParallelParam] instance determining the parallel back-end to be used during evaluation.
+#' @param use.dimred a character or numeric, specifying whether existing values in `reducedDims(x)` should be used.
 #'
 #' @return a SpatialExperiment object containing an additional assay storing the interest points identified at each location. This assay is stored as a BumpyMatrix where each cell of the matrix (each location, gene/protein pair) stores a dataframe with 4 columns, scale, x, y, response. Each coordinate (x,y) represents the sub-pixel resolution of the interest point.
-#' 
+#'
 #' @examples
 #' # ADD_EXAMPLES_HERE
-#' 
-#' @export 
-detectInterestPoints <- function(spe, assay = assayNames(spe)[1], masks = NULL, features = TRUE, thresh = 0, ipassay = "ipoints", octaves = NULL, BPPARAM = BiocParallel::bpparam()) {
+#'
+#' @export
+detectInterestPoints <- function(spe, assay.type = assayNames(spe)[1], masks = NULL, features = TRUE, thresh = 0, ipassay = "ipoints", octaves = NULL, BPPARAM = BiocParallel::bpparam(), use.dimred = NULL) {
   stopifnot(is(spe, "SpatialExperiment"))
   stopifnot(ncol(SpatialExperiment::spatialCoords(spe)) == 2)
   stopifnot(thresh >= 0)
   stopifnot(is.null(octaves) | octaves > 0)
   stopifnot(is.character(ipassay))
 
-  # check features
-  features = checkFeatures(spe, features)
-  if (!any(features)) {
-    message("no features to analyse")
-    return(spe)
-  }
-  
   # get samples
   all_samples = unique(spe$sample_id)
 
@@ -164,17 +195,46 @@ detectInterestPoints <- function(spe, assay = assayNames(spe)[1], masks = NULL, 
     names(masks) = all_samples
   }
 
+  # check reduced dim
+  if (is.null(use.dimred)) {
+    # check features
+    features = checkFeatures(spe, features)
+    if (!any(features)) {
+      message("no features to analyse")
+      return(spe)
+    }
+
+    # check and/or convert assay id to name
+    assay.type = checkExprMeasurements(assay.type, SummarizedExperiment::assayNames(spe), "assay.type")
+  } else {
+    # check and/or convert dimred id to name
+    use.dimred = checkExprMeasurements(use.dimred, SingleCellExperiment::reducedDimNames(spe), "use.dimred")
+
+    # check features
+    if (!is.logical(features) | length(features) > 1) {
+      warning("argument 'features' ignored")
+    }
+
+    features = colnames(SingleCellExperiment::reducedDim(spe, use.dimred))
+    if (is.null(features)) {
+      features = seq_len(ncol(SingleCellExperiment::reducedDim(spe, use.dimred)))
+      features = paste0("Dim", features)
+      colnames(SingleCellExperiment::reducedDim(spe, use.dimred)) = features
+    }
+  }
+
   # split by sample, analyse, merge
   spe = lapply(all_samples, \(sample_id) spe[, spe$sample_id == sample_id])
   spe = BiocParallel::bpmapply(\(x, mask) {
     # compute max octaves if not provided
-    if (is.null(octaves))
+    if (is.null(octaves)) {
       octaves = getOctaves(x)
-  
-    detectIP_intl(x, assay.type, mask, features, thresh, ipassay, octaves)
+    }
+
+    detectIP_intl(x, assay.type, mask, features, thresh, ipassay, octaves, use.dimred)
   }, spe, masks, BPPARAM = BPPARAM, SIMPLIFY = FALSE) |>
     do.call(what = SummarizedExperiment::cbind)
-  
+
   return(spe)
 }
 
@@ -183,37 +243,44 @@ detectInterestPoints <- function(spe, assay = assayNames(spe)[1], masks = NULL, 
 #' This function estimates the local length-scale for each location by combining scale information from interest points detected using each gene.
 #'
 #' @inheritParams detectInterestPoints
+#' @param slot.type a character, specifying where interest points are saved. If expression data from an assay was used, this will be "assay", and if a reduced dimension was used, this will be "dimred". Leaving it at "auto" (the default) will enable a search across both and locate the assay. If assays with the name 'ipassay' exist in both 'assay' and 'dimred', users must specify as "auto" will throw an error.
 #' 
 #' @return a numeric vector containing the estimated scales.
 #' @examples
 #' # ADD_EXAMPLES_HERE
 #' 
 #' @export
-detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, thresh = 0, BPPARAM = BiocParallel::bpparam()) {
+detectScale <- function(spe, ipassay, masks = NULL, smooth = TRUE, thresh = 0, BPPARAM = BiocParallel::bpparam(), slot.type = c("auto", "assay", "dimred")) {
   stopifnot(is(spe, "SpatialExperiment"))
   stopifnot(ncol(SpatialExperiment::spatialCoords(spe)) == 2)
   stopifnot(thresh >= 0)
+  stopifnot(is.character(ipassay))
+  slot.type = match.arg(slot.type)
 
   # extract required data
   expected_cols = c("scale", "x", "y", "response")
   all_samples = unique(spe$sample_id)
 
   # convert assay id to name
-  if (is.numeric(ipassay)) {
-    # convert assay id to assay name
-    ipassay = SummarizedExperiment::assayNames(spe)[ipassay]
+  names_assay = SummarizedExperiment::assayNames(spe)
+  names_dimred = SingleCellExperiment::reducedDimNames(spe)
+
+  if (slot.type == "assay") {
+    ipassay = checkExprMeasurements(ipassay, names_assay, "ipassay")
+  } else if (slot.type == "dimred") {
+    ipassay = checkExprMeasurements(ipassay, names_dimred, "ipassay")
   } else {
-    assay_names = SummarizedExperiment::assayNames(spe)
-    if (!ipassay %in% assay_names) {
-      assay_names = grep(paste0("^", ipassay), assay_names, value = TRUE)
-      if (length(assay_names) == 1) {
-        ipassay = assay_names
-      } else {
-        stop("'ipassay' not found in the 'spe' object")
-      }
+    if (ipassay %in% names_assay & ipassay %in% names_dimred) {
+      stop("'ipassay' present in both assays and reducedDims, please select 'slot.type' explicitly")
+    } else if (ipassay %in% names_assay) {
+      slot.type = "assay"
+    } else if(ipassay %in% names_dimred) {
+      slot.type = "dimred"
+    } else {
+      # use existing error reporting mechanism
+      checkExprMeasurements(ipassay, names_assay, "ipassay")
     }
   }
-  stopifnot(is(SummarizedExperiment::assay(spe, ipassay), "BumpyMatrix"))
   
   # check masks
   if (!is.null(masks)) {
@@ -236,7 +303,11 @@ detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, t
   spe_scales = BiocParallel::bpmapply(\(x, mask) {
     # extract required data
     coords = SpatialExperiment::spatialCoords(x)
-    ip = SummarizedExperiment::assay(x, ipassay)
+    if (slot.type == "assay") {
+      ip = SummarizedExperiment::assay(x, ipassay)
+    } else {
+      ip = SingleCellExperiment::reducedDim(x, ipassay)
+    }
     
     # check mask
     if (is.null(mask)) {
@@ -248,8 +319,8 @@ detectScale <- function(spe, ipassay = "ipoints", masks = NULL, smooth = TRUE, t
     }
 
     # check df
-    if (!all(expected_cols %in% colnames(ip[1, 1][[1]]))) {
-      stop("BumpyMatrix is not in the correct format (should be the output of 'detectInterestPoints()'")
+    if (!is(ip, "BumpyMatrix") | !all(expected_cols %in% colnames(ip[1, 1][[1]]))) {
+      stop("incorrect format for 'ipassay', please use 'detectInterestPoints()'")
     }
 
     keep = ip[, , "response"] > thresh

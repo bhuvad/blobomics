@@ -6,19 +6,20 @@
 \usage{
 detectInterestPoints(
   spe,
-  assay = assayNames(spe)[1],
+  assay.type = assayNames(spe)[1],
   masks = NULL,
   features = TRUE,
   thresh = 0,
   ipassay = "ipoints",
   octaves = NULL,
-  BPPARAM = bpparam()
+  BPPARAM = BiocParallel::bpparam(),
+  use.dimred = NULL
 )
 }
 \arguments{
 \item{spe}{a SpatialExperiment object, containing gene/protein or any such omic measurement. NOTE that spatial coordinates need to be integers. This can be achieved by binning data into coarser bins. Binning will speed up computation without significantly affecting interest point detection and is therefore advised.}
 
-\item{assay}{a character or numeric, specifying the assay to use (default is the first assay).}
+\item{assay.type}{a character or numeric, specifying the assay to use (default is the first assay).}
 
 \item{masks}{a named list of binary or logical matrices, that specifies the mask to use for each sample. The defauls (NULL) is to use mask out areas without any expression measurement. Otherwise, the list must be named using the unique \link{sample_id}'s and should cover all loci (i.e., nrow should be equal to the maximum y coordinate and ncol should equal the maximum x coordinate).}
 
@@ -31,6 +32,8 @@ detectInterestPoints(
 \item{octaves}{a numeric, stating the maximum number of octaves that should be computed (default NULL, max octave is automatically computed for each sample).}
 
 \item{BPPARAM}{an optional \link{BiocParallelParam} instance determining the parallel back-end to be used during evaluation.}
+
+\item{use.dimred}{a character or numeric, specifying whether existing values in \code{reducedDims(x)} should be used.}
 }
 \value{
 a SpatialExperiment object containing an additional assay storing the interest points identified at each location. This assay is stored as a BumpyMatrix where each cell of the matrix (each location, gene/protein pair) stores a dataframe with 4 columns, scale, x, y, response. Each coordinate (x,y) represents the sub-pixel resolution of the interest point.
