@@ -132,14 +132,14 @@ detectIP_intl <- function(spe, assay.type = "counts", mask = NULL, features, thr
   # resolve row indices
   irow = df$gene
   df = df[, -5]
-  ixmap = seq_len(nrow(spe))[features]
+  ixmap = seq_len(ncol(emat))[features]
   irow = ixmap[irow]
-  irow = factor(irow, levels = seq_len(nrow(spe)))
+  irow = factor(irow, levels = seq_len(ncol(emat)))
 
   # resolve column indices
   icol = matrix(NA_integer_, xmx, ymx)
-  icol[coords] = seq_len(ncol(spe))
-  icol = factor(icol[cbind(round(df$x), round(df$y))], seq_len(ncol(spe)))
+  icol[coords] = seq_len(nrow(emat))
+  icol = factor(icol[cbind(round(df$x), round(df$y))], seq_len(nrow(emat)))
 
   # convert to BumpyDataFrameMatrix and add assay
   mat = BumpyMatrix::splitAsBumpyMatrix(df, row = irow, column = icol, sparse = TRUE)
@@ -149,7 +149,7 @@ detectIP_intl <- function(spe, assay.type = "counts", mask = NULL, features, thr
     SummarizedExperiment::assay(spe, ipassay) = mat
   } else {
     rownames(mat) = colnames(SingleCellExperiment::reducedDim(spe, use.dimred))
-    SingleCellExperiment::reducedDim(spe, ipassay) = t(mat)
+    SingleCellExperiment::reducedDim(spe, ipassay) = BumpyMatrix::t(mat)
   }
 
   return(spe)

@@ -1,6 +1,6 @@
 Package: spaceblobs
 Title: Blob Detection to Infer Multi-scale Spatial Patterns in Spatial 'omics Datasets
-Version: 0.9.3
+Version: 0.9.4
 Authors@R: c(
             person(given = "Dharmesh D.",
                    family = "Bhuva",
