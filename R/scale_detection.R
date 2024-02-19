@@ -23,6 +23,12 @@ checkFeatures <- function(spe, features) {
   if (!is.logical(features) & !is.character(features)) {
     stop("'features' should be logical or character")
   }
+  
+  if (is.logical(features)) {
+    if (!length(features) %in% c(1, nrow(spe))) {
+      stop("'features' should have the same length as nrow(spe)")
+    }
+  }
 
   if (is.character(features)) {
     # feature is a column name
@@ -30,18 +36,14 @@ checkFeatures <- function(spe, features) {
       rdata = SummarizedExperiment::rowData(spe)
       if (!features %in% colnames(rdata)) {
         stop(sprintf("'%s' column not found in rowData(spe)", features))
-      } else {
-        features = rdata[, features]
+      }
+      features = rdata[, features]
+      if (!is.logical(features)) {
+        stop(sprintf("'%s' column in rowData(spe) should be logical", features))
       }
     } else {
       # feature contains rownames
       features = rownames(spe) %in% features
-    }
-  }
-  
-  if (is.logical(features)) {
-    if (!length(features) %in% c(1, nrow(spe))) {
-      stop("'features' should have the same length as nrow(spe)")
     }
   }
 
@@ -132,6 +134,7 @@ detectIP_intl <- function(spe, assay.type = "counts", mask = NULL, features, thr
   # resolve row indices
   irow = df$gene
   df = df[, -5]
+  # browser()
   ixmap = seq_len(ncol(emat))[features]
   irow = ixmap[irow]
   irow = factor(irow, levels = seq_len(ncol(emat)))
@@ -211,15 +214,17 @@ detectInterestPoints <- function(spe, assay.type = assayNames(spe)[1], masks = N
     use.dimred = checkExprMeasurements(use.dimred, SingleCellExperiment::reducedDimNames(spe), "use.dimred")
 
     # check features
-    if (!is.logical(features) | length(features) > 1) {
+    if (!is.logical(features) | length(features) > 1 | !features) {
       warning("argument 'features' ignored")
     }
+    features = TRUE
 
-    features = colnames(SingleCellExperiment::reducedDim(spe, use.dimred))
-    if (is.null(features)) {
-      features = seq_len(ncol(SingleCellExperiment::reducedDim(spe, use.dimred)))
-      features = paste0("Dim", features)
-      colnames(SingleCellExperiment::reducedDim(spe, use.dimred)) = features
+    dimnames = colnames(SingleCellExperiment::reducedDim(spe, use.dimred))
+    if (is.null(dimnames)) {
+      dimnames = seq_len(ncol(SingleCellExperiment::reducedDim(spe, use.dimred)))
+      dimnames = paste0("Dim", dimnames)
+      colnames(SingleCellExperiment::reducedDim(spe, use.dimred)) = dimnames
+      warning("dim names not found, adding default dim names")
     }
   }
 
