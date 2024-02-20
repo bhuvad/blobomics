@@ -311,7 +311,7 @@ detectScale <- function(spe, ipassay, masks = NULL, smooth = TRUE, thresh = 0, B
     if (slot.type == "assay") {
       ip = SummarizedExperiment::assay(x, ipassay)
     } else {
-      ip = SingleCellExperiment::reducedDim(x, ipassay)
+      ip = BumpyMatrix::t(SingleCellExperiment::reducedDim(x, ipassay))
     }
     
     # check mask
